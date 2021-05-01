@@ -240,10 +240,6 @@ class direct_point_learn():
             self.test_y_data_3d = self.g_data[test_index[1:], :, :]
             self.test_x_data, test_y_data = self.raw_to_table(test_xg_data, test_xm_data, self.test_y_data_3d)
             callbacks_list = [
-                keras.callbacks.EarlyStopping(
-                    monitor='val_loss',
-                    patience=10
-                ),
                 keras.callbacks.ModelCheckpoint(
                     filepath='latent_LSTM.h5',
                     monitor='val_loss',
@@ -257,7 +253,7 @@ class direct_point_learn():
             ]
             history = self.model.fit(train_x_data, train_y_data,
                                      validation_data=(self.test_x_data[:100*499*788], test_y_data[:100*499*788]),
-                                     batch_size=499*788, epochs=50)
+                                     batch_size=499*788, epochs=50, callbacks=callbacks_list)
             self.model.save('pointwise_1_sequential')
             fig = plt.figure(figsize=(12, 6))
             plt.plot(history.history['loss'], label="train loss")
