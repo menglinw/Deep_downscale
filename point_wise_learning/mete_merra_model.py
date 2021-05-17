@@ -44,7 +44,10 @@ class mete_merra_to_g5nr_model():
         # processing data
         self._mete_temp_avg()
         self._train_test_split(test_season=test_season)
-
+        self.train_x, self.train_y = self._flatten(self.train_xg_data, self.train_xm_data, self.train_xme_data,
+                                                           self.train_y_data, self.xday_list)
+        self.test_x, self.test_y = self._flatten(self.test_xg_data, self.test_xm_data, self.test_xme_data,
+                                                 self.test_y_data, self.yday_list)
         # define lat&lon of MERRA, G5NR and mete
         self.M_lons = self.m_data.variables['lon'][:]
         #self.M_lons = (M_lons-M_lons.mean())/M_lons.std()
@@ -248,7 +251,6 @@ class mete_merra_to_g5nr_model():
         return model
 
     def _generator(self, xg_data, xm_data, xme_data, yg_data, day_list):
-        
         while True:
             for i, day in enumerate(day_list):
                 permutation = np.random.permutation(np.prod(yg_data[i].shape))
@@ -268,6 +270,31 @@ class mete_merra_to_g5nr_model():
                 outy = yg_data[i].reshape((np.prod(yg_data[i].shape), 1))
                 yield outx_table[permutation], outy[permutation]
 
+    def _flatten(self, xg_data, xm_data, xme_data, yg_data, day_list):
+        permut = np.permutation(np.prod(xg_data.shape))
+        x = np.zeros((np.prod(xg_data.shape), 26))
+        y = np.zeros((np.prod(xg_data.shape), 1))
+        for i, day in enumerate(day_list):
+            outx_table = data_processing.image_to_table(xg_data[i, :, :],
+                                                        (self.G_lats-self.G_lats.mean())/self.G_lats.std(),
+                                                        (self.G_lons - self.G_lons.mean())/self.G_lons.std(),
+                                                        (day%365)/365)
+            for var, data in xm_data.items():
+                xm_img = data_processing.resolution_downward(data[i, :, :], self.M_lats, self.M_lons,
+                                                             self.G_lats, self.G_lons)
+                outx_table = np.concatenate((outx_table, xm_img.reshape((np.prod(xm_img.shape), 1))), 1)
+
+            for var, data in xme_data.items():
+                xme_img = data_processing.resolution_downward(data[i, :, :], self.Mete_lats, self.Mete_lons,
+                                                              self.G_lats, self.G_lons)
+                outx_table = np.concatenate((outx_table, xme_img.reshape((np.prod(xme_img.shape), 1))), 1)
+            outy = yg_data[i].reshape((np.prod(yg_data[i].shape), 1))
+            x[i*np.prod(yg_data[i].shape):(i+1)*np.prod(yg_data[i].shape)] = outx_table
+            y[i*np.prod(yg_data[i].shape):(i+1)*np.prod(yg_data[i].shape)] = outy
+        return x[permut], y[permut]
+        
+
+
     def train(self, epoch=50):
         callbacks_list = [
             keras.callbacks.EarlyStopping(
@@ -285,6 +312,7 @@ class mete_merra_to_g5nr_model():
                 patience=5
             )
         ]
+        """
         history = self.model.fit_generator(generator=self._generator(self.train_xg_data, self.train_xm_data, self.train_xme_data,
                                                            self.train_y_data, self.xday_list),
                                            epochs=epoch,
@@ -293,6 +321,10 @@ class mete_merra_to_g5nr_model():
                                                                            self.test_y_data, self.yday_list),
                                            callbacks=callbacks_list
                                            )
+        """
+        history = self.model.fit(self.train_x, self.train_y,
+                                 validation_data=(self.test_x, self.test_y),
+                                 batch_size=499 * 788, epochs=100, callbacks=callbacks_list)
         fig = plt.figure(figsize=(12, 6))
         plt.plot(history.history['loss'], label="train loss")
         plt.plot(history.history['val_loss'], label='test loss')
