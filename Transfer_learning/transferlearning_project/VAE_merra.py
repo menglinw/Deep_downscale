@@ -18,33 +18,37 @@ from keras.preprocessing.image import random_shift
 from keras import backend as K
 import json
 import random
+import matplotlib.pyplot as plt
 
-img_shape = (63,78,1)
+
+img_shape = (63, 78, 1)
 batch_size = 5
-latent_dim = 50
+latent_dim = 500
 
 # Encoder
 input_img = keras.Input(shape=img_shape)
-x = layers.Conv2D(32,3,activation='relu')(input_img)
-x = layers.MaxPooling2D(pool_size = (2,2), padding='same')(x)
-x = layers.Conv2D(64,3, activation='relu')(x)
-x = layers.MaxPooling2D(pool_size = (2,2), padding='same')(x)
+x = layers.Conv2D(32, 3, activation='relu')(input_img)
+x = layers.MaxPooling2D(pool_size=(2, 2), padding='same')(x)
 x = layers.Conv2D(64, 3, activation='relu')(x)
-x = layers.MaxPooling2D(pool_size = (2,2), padding='same')(x)
+x = layers.MaxPooling2D(pool_size=(2, 2), padding='same')(x)
 x = layers.Conv2D(64, 3, activation='relu')(x)
-x = layers.MaxPooling2D(pool_size = (2,2), padding='same')(x)
+x = layers.MaxPooling2D(pool_size=(2, 2), padding='same')(x)
+x = layers.Conv2D(64, 3, activation='relu')(x)
+x = layers.MaxPooling2D(pool_size=(2, 2), padding='same')(x)
 shape_before_flattening = K.int_shape(x)
-
 x = layers.Flatten()(x)
 x = layers.Dense(32, activation='relu')(x)
 
 z_mean = layers.Dense(latent_dim)(x)
 z_log_var = layers. Dense(latent_dim)(x)
 
+
 def sampling(args):
     z_mean, z_log_var = args
     epsilon = K.random_normal(shape=(K.shape(z_mean)[0], latent_dim), mean=0., stddev=1.)
     return z_mean + K.exp(z_log_var)*epsilon
+
+
 z = layers.Lambda(sampling)([z_mean, z_log_var])
 encoder = Model(input_img, z)
 
@@ -60,13 +64,14 @@ x = layers.UpSampling2D((2,2))(x)
 x = layers.Conv2DTranspose(32, 2, activation='relu')(x)
 x = layers.UpSampling2D((2,2))(x)
 x = layers.Conv2DTranspose(32, (2,17), activation='relu')(x)
-x = layers.Conv2D(1, 3, padding = 'same')(x)
+x = layers.Conv2D(1, 3, padding='same')(x)
 decoder = Model(decoder_input, x)
 
 vae_input = layers.Input(shape=img_shape)
 vae_encoder_output = encoder(vae_input)
 vae_decoder_output = decoder(vae_encoder_output)
 vae = Model(vae_input, vae_decoder_output)
+
 
 def loss_func(z_mean, z_log_var):
     def vae_reconstruction_loss(y_true, y_predict):
@@ -135,7 +140,17 @@ history = vae.fit(x=train_dat, y = train_dat, shuffle=True, epochs = 500,
                   batch_size = 10, validation_data = (val_dat,val_dat),
                   callbacks=callbacks_list)
 
-np.save('loss_history.npy',history.history)
+def plot_loss(history, name='loss_curve_merraLSTM.jpg'):
+    fig = plt.figure(figsize=(12, 6))
+    plt.plot(history.history['loss'], label="train loss")
+    plt.plot(history.history['val_loss'], label='test loss')
+    plt.xlabel('epochs')
+    plt.ylabel('loss')
+    plt.legend()
+    plt.savefig(name)
+
+
+plot_loss(history, name='merra_VAE_loss_curve.jpg')
 pred_dat = encoder.predict(all_dat)
 encoder.save('encoder_model')
 decoder.save('decoder_model')

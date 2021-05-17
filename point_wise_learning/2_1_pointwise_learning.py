@@ -132,6 +132,27 @@ class direct_point_learn():
         #x = Dropout(0.5)(x)
         x = LeakyReLU(alpha=0.1)(x)
 
+
+        x = layers.Dense(256, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(256, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(128, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(128, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
         x = layers.Dense(64, kernel_initializer="he_normal")(x)
         x = BatchNormalization()(x)
         #x = Dropout(0.5)(x)
@@ -146,6 +167,32 @@ class direct_point_learn():
         x = BatchNormalization()(x)
         #x = Dropout(0.5)(x)
         x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(32, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(32, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(32, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(32, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(32, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
 
         x = layers.Dense(16, kernel_initializer="he_normal")(x)
         x = BatchNormalization()(x)
@@ -253,7 +300,7 @@ class direct_point_learn():
             ]
             history = self.model.fit(train_x_data, train_y_data,
                                      validation_data=(self.test_x_data[:100*499*788], test_y_data[:100*499*788]),
-                                     batch_size=499*788, epochs=50, callbacks=callbacks_list)
+                                     batch_size=499*788, epochs=100, callbacks=callbacks_list)
             self.model.save('pointwise_1_sequential')
             fig = plt.figure(figsize=(12, 6))
             plt.plot(history.history['loss'], label="train loss")

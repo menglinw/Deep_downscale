@@ -8,14 +8,17 @@ from keras.optimizers import Adam
 from keras.models import Model
 from keras import backend as K
 import os
-random.seed(2021)
+import sys
+import matplotlib.pyplot as plt
+
+random.seed(int(sys.argv[-1]))
 img_shape = (63,78,1)
 batch_size = 5
-latent_dim = 50
+latent_dim = 500
 
 
 
-merra_VAE_path = r'/scratch/menglinw/Downscale_data/MERRA2/TransferLearning_result/merra_VAE_result/result1'
+merra_VAE_path = r'/scratch/menglinw/Downscale_data/MERRA2/TransferLearning_result/merra_VAE_result/result2'
 merra_encoder = keras.models.load_model(os.path.join(merra_VAE_path, 'encoder_model'), compile=False)
 merra_encoder = Model(merra_encoder.input, merra_encoder.layers[-4].output)
 merra_decoder = keras.models.load_model(os.path.join(merra_VAE_path, 'decoder_model'), compile=False)
@@ -30,7 +33,7 @@ x = layers.Conv2D(128, (10,10))(x)
 x = layers.MaxPool2D((3,4))(x)
 x = layers.Conv2D(256, (16, 18))(x)
 x = Dense(64)(x)
-x = Dense(1)(x)
+x = Dense(1, activation='relu')(x)
 x = merra_encoder(x)
 z_mean = layers.Dense(latent_dim)(x)
 z_log_var = layers. Dense(latent_dim)(x)
@@ -52,7 +55,7 @@ x = layers.UpSampling2D((3,4))(x)
 x = layers.Conv2DTranspose(128, (10,10))(x)
 x = layers.UpSampling2D((2,2))(x)
 x = layers.Conv2DTranspose(1, (14,11))(x)
-x = Dense(1)(x)
+x = Dense(1, activation='relu')(x)
 trans_decoder = Model(decoder_input, x)
 
 
@@ -129,7 +132,7 @@ def data_split(file_path_g5nr_05, file_path_g5nr_06, target_var, n_validate=10):
 
 file_path_g5nr_05 = '/scratch/menglinw/Downscale_data/MERRA2/G5NR_aerosol_variables_over_MiddleEast_daily_20050516-20060515.nc'
 file_path_g5nr_06 = '/scratch/menglinw/Downscale_data/MERRA2/G5NR_aerosol_variables_over_MiddleEast_daily_20060516-20070515.nc'
-train_dat, val_dat, all_dat = data_split(file_path_g5nr_05, file_path_g5nr_06, 'TOTEXTTAU', n_validate= 35)
+train_dat, val_dat, all_dat = data_split(file_path_g5nr_05, file_path_g5nr_06, 'TOTEXTTAU', n_validate=30)
 callbacks_list = [
         keras.callbacks.EarlyStopping(
                 monitor='val_loss',
@@ -155,3 +158,12 @@ pred_dat = trans_encoder.predict(all_dat)
 trans_encoder.save('trans_encoder_model')
 trans_decoder.save('trans_decoder_model')
 np.save('pred_dat', pred_dat)
+
+fig = plt.figure(figsize=(12, 6))
+plt.plot(history.history['loss'], label="train loss")
+plt.plot(history.history['val_loss'], label='test loss')
+plt.xlabel('epochs')
+plt.ylabel('loss')
+plt.legend()
+plt.savefig('loss_curve_%d.jpg' % int(sys.argv[-1]))
+

@@ -16,7 +16,7 @@ import datetime
 
 class mete_merra_to_g5nr_model():
     def __init__(self, file_path_g_05, file_path_g_06, file_path_m, file_path_mete05, file_path_mete06, file_path_mete07,
-                 test_season=1):
+                 merra_var=['TOTEXTTAU'], mete_var=['10m_u_component_of_wind'], test_season=1):
         # define path and target variable
         self.test_season = test_season
         self.file_path_g_05 = file_path_g_05
@@ -26,6 +26,8 @@ class mete_merra_to_g5nr_model():
         self.file_path_mete06 = file_path_mete06
         self.file_path_mete07 = file_path_mete07
         self.target_var = 'TOTEXTTAU'
+        self.merra_var = merra_var
+        self.mete_var = mete_var
 
         # read g5nr data
         g05_data = nc.Dataset(file_path_g_05)
@@ -44,10 +46,7 @@ class mete_merra_to_g5nr_model():
         # processing data
         self._mete_temp_avg()
         self._train_test_split(test_season=test_season)
-        self.train_x, self.train_y = self._flatten(self.train_xg_data, self.train_xm_data, self.train_xme_data,
-                                                           self.train_y_data, self.xday_list)
-        self.test_x, self.test_y = self._flatten(self.test_xg_data, self.test_xm_data, self.test_xme_data,
-                                                 self.test_y_data, self.yday_list)
+
         # define lat&lon of MERRA, G5NR and mete
         self.M_lons = self.m_data.variables['lon'][:]
         #self.M_lons = (M_lons-M_lons.mean())/M_lons.std()
@@ -59,7 +58,11 @@ class mete_merra_to_g5nr_model():
         # self.G_lats = (G_lats-G_lats.mean())/G_lats.std()
         self.Mete_lons = self.mete05_data.variables['longitude'][:]
         self.Mete_lats = self.mete05_data.variables['latitude'][:]
-
+        
+        self.train_x, self.train_y = self._flatten(self.train_xg_data, self.train_xm_data, self.train_xme_data,
+                                                           self.train_y_data, self.xday_list)
+        self.test_x, self.test_y = self._flatten(self.test_xg_data, self.test_xm_data, self.test_xme_data,
+                                                 self.test_y_data, self.yday_list)
         # define model
         self.model = self.define_model()
 
@@ -151,7 +154,7 @@ class mete_merra_to_g5nr_model():
 
 
     def define_model(self):
-        input = Input(shape=(26))
+        input = Input(shape=(4+len(self.merra_var)+len(self.mete_var)))
         x = layers.Dense(32, kernel_initializer="he_normal")(input)
         x = BatchNormalization()(x)
         x = LeakyReLU(alpha=0.1)(x)
@@ -271,7 +274,7 @@ class mete_merra_to_g5nr_model():
                 yield outx_table[permutation], outy[permutation]
 
     def _flatten(self, xg_data, xm_data, xme_data, yg_data, day_list):
-        permut = np.permutation(np.prod(xg_data.shape))
+        permut = np.random.permutation(np.prod(xg_data.shape))
         x = np.zeros((np.prod(xg_data.shape), 26))
         y = np.zeros((np.prod(xg_data.shape), 1))
         for i, day in enumerate(day_list):
@@ -280,14 +283,16 @@ class mete_merra_to_g5nr_model():
                                                         (self.G_lons - self.G_lons.mean())/self.G_lons.std(),
                                                         (day%365)/365)
             for var, data in xm_data.items():
-                xm_img = data_processing.resolution_downward(data[i, :, :], self.M_lats, self.M_lons,
+                if var in self.merra_var:
+                    xm_img = data_processing.resolution_downward(data[i, :, :], self.M_lats, self.M_lons,
                                                              self.G_lats, self.G_lons)
-                outx_table = np.concatenate((outx_table, xm_img.reshape((np.prod(xm_img.shape), 1))), 1)
+                    outx_table = np.concatenate((outx_table, xm_img.reshape((np.prod(xm_img.shape), 1))), 1)
 
             for var, data in xme_data.items():
-                xme_img = data_processing.resolution_downward(data[i, :, :], self.Mete_lats, self.Mete_lons,
+                if var in self.mete_var:
+                    xme_img = data_processing.resolution_downward(data[i, :, :], self.Mete_lats, self.Mete_lons,
                                                               self.G_lats, self.G_lons)
-                outx_table = np.concatenate((outx_table, xme_img.reshape((np.prod(xme_img.shape), 1))), 1)
+                    outx_table = np.concatenate((outx_table, xme_img.reshape((np.prod(xme_img.shape), 1))), 1)
             outy = yg_data[i].reshape((np.prod(yg_data[i].shape), 1))
             x[i*np.prod(yg_data[i].shape):(i+1)*np.prod(yg_data[i].shape)] = outx_table
             y[i*np.prod(yg_data[i].shape):(i+1)*np.prod(yg_data[i].shape)] = outy
@@ -387,20 +392,20 @@ class mete_merra_to_g5nr_model():
         self.test_y_data.dump('true_y')
 
 if __name__ == "__main__":
-    #file_path_g_06 = '/scratch/menglinw/Downscale_data/MERRA2/G5NR_aerosol_variables_over_MiddleEast_daily_20060516-20070515.nc'
-    file_path_g_06 = r'C:\Users\96349\Documents\Downscale_data\MERRA2\G5NR_aerosol_variables_over_MiddleEast_daily_20060516-20070515.nc'
-    #file_path_g_05 = '/scratch/menglinw/Downscale_data/MERRA2/G5NR_aerosol_variables_over_MiddleEast_daily_20050516-20060515.nc'
-    file_path_g_05 = r'C:\Users\96349\Documents\Downscale_data\MERRA2\G5NR_aerosol_variables_over_MiddleEast_daily_20050516-20060515.nc'
+    file_path_g_06 = '/scratch/menglinw/Downscale_data/MERRA2/G5NR_aerosol_variables_over_MiddleEast_daily_20060516-20070515.nc'
+    #file_path_g_06 = r'C:\Users\96349\Documents\Downscale_data\MERRA2\G5NR_aerosol_variables_over_MiddleEast_daily_20060516-20070515.nc'
+    file_path_g_05 = '/scratch/menglinw/Downscale_data/MERRA2/G5NR_aerosol_variables_over_MiddleEast_daily_20050516-20060515.nc'
+    #file_path_g_05 = r'C:\Users\96349\Documents\Downscale_data\MERRA2\G5NR_aerosol_variables_over_MiddleEast_daily_20050516-20060515.nc'
     # file path of MERRA-2 data
-    # file_path_m = '/scratch/menglinw/Downscale_data/MERRA2/MERRA2_aerosol_variables_over_MiddleEast_daily_20000516-20180515.nc'
-    file_path_m = r'C:\Users\96349\Documents\Downscale_data\MERRA2\MERRA2_aerosol_variables_over_MiddleEast_daily_20000516-20180515.nc'
-    #file_path_mete05 = '/scratch/menglinw/Downscale_data/METE/2005_mete_data.nc'
-    #file_path_mete06 = '/scratch/menglinw/Downscale_data/METE/2006_mete_data.nc'
-    #file_path_mete07 = '/scratch/menglinw/Downscale_data/METE/2007_mete_data.nc'
+    file_path_m = '/scratch/menglinw/Downscale_data/MERRA2/MERRA2_aerosol_variables_over_MiddleEast_daily_20000516-20180515.nc'
+    #file_path_m = r'C:\Users\96349\Documents\Downscale_data\MERRA2\MERRA2_aerosol_variables_over_MiddleEast_daily_20000516-20180515.nc'
+    file_path_mete05 = '/scratch/menglinw/Downscale_data/METE/2005_mete_data.nc'
+    file_path_mete06 = '/scratch/menglinw/Downscale_data/METE/2006_mete_data.nc'
+    file_path_mete07 = '/scratch/menglinw/Downscale_data/METE/2007_mete_data.nc'
 
-    file_path_mete05 = r'C:\Users\96349\Documents\Downscale_data\meteology_data/2005_mete_data.nc'
-    file_path_mete06 = r'C:\Users\96349\Documents\Downscale_data\meteology_data/2006_mete_data.nc'
-    file_path_mete07 = r'C:\Users\96349\Documents\Downscale_data\meteology_data/2007_mete_data.nc'
+    #file_path_mete05 = r'C:\Users\96349\Documents\Downscale_data\meteology_data/2005_mete_data.nc'
+    #file_path_mete06 = r'C:\Users\96349\Documents\Downscale_data\meteology_data/2006_mete_data.nc'
+    #file_path_mete07 = r'C:\Users\96349\Documents\Downscale_data\meteology_data/2007_mete_data.nc'
     model = mete_merra_to_g5nr_model(file_path_g_05, file_path_g_06, file_path_m, file_path_mete05, file_path_mete06,
                                      file_path_mete07, test_season=1)
     model.train(epoch=1)

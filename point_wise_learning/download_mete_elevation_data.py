@@ -1,7 +1,7 @@
 
 import cdsapi
 # 2005
-'''
+
 c = cdsapi.Client()
 
 c.retrieve(
@@ -10,7 +10,7 @@ c.retrieve(
         'product_type': 'reanalysis',
         'format': 'netcdf',
         'area': [
-            42, 25, 10,
+            43, 25, 10,
             75,
         ],
         'day': [
@@ -50,9 +50,9 @@ c.retrieve(
         ],
         'year': '2005',
     },
-    'download.nc')
-'''
+    '2005_mete_data.nc')
 
+'''
 # 2006
 c = cdsapi.Client()
 
@@ -152,3 +152,4 @@ c.retrieve(
         ],
     },
     '2007_mete_data.nc')
+'''
