@@ -2,10 +2,10 @@ import numpy as np
 import nc_process
 import netCDF4 as nc
 import random
-import data_processing
+from data_prepare import data_processing
 from tensorflow import keras
 import keras.layers as layers
-from keras.layers import Input, Dense, Reshape, Dropout, Concatenate, BatchNormalization, Activation, LeakyReLU
+from keras.layers import Input, BatchNormalization, Activation, LeakyReLU
 from keras.models import Model
 import matplotlib.pyplot as plt
 
@@ -333,8 +333,8 @@ class direct_point_learn():
                 m_list = np.zeros((np.prod(prev_g_image.shape), 1))
                 input_x_data = data_processing.image_to_table(prev_g_image, self.G_lats, self.G_lons,
                                                               (self.test_index[i + 1] % 365) / 365)
-                m_list[:, 0] = data_processing.resolution_downward(prev_m_image,self.M_lats, self.M_lons,
-                                                                self.G_lats, self.G_lons).\
+                m_list[:, 0] = data_processing.resolution_downward(prev_m_image, self.M_lats, self.M_lons,
+                                                                   self.G_lats, self.G_lons).\
                     reshape(np.prod(prev_g_image.shape))
                 input_x_data = np.concatenate((input_x_data, m_list), 1)
                 pred_seq_sub_y = self.model.predict_on_batch(input_x_data)

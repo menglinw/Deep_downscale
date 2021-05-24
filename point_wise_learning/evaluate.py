@@ -1,13 +1,4 @@
-import numpy as np
-import nc_process
-import netCDF4 as nc
-import random
-import data_processing
 from tensorflow import keras
-import keras.layers as layers
-from keras.layers import Input, Dense, Reshape, Dropout, Concatenate, BatchNormalization, Activation
-from keras.models import Model
-import matplotlib.pyplot as plt
 
 file_path_g_06 = '/scratch/menglinw/Downscale_data/MERRA2/G5NR_aerosol_variables_over_MiddleEast_daily_20060516-20070515.nc'
 # r'C:\Users\96349\Documents\Downscale_data\MERRA2\G5NR_aerosol_variables_over_MiddleEast_daily_20060516-20070515.nc'

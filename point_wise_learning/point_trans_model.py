@@ -1,11 +1,10 @@
 import numpy as np
 import nc_process
 import netCDF4 as nc
-import random
-import data_processing
+from data_prepare import data_processing
 from tensorflow import keras
 import keras.layers as layers
-from keras.layers import Input, Dense, Reshape, Dropout, Concatenate, BatchNormalization, Activation, LeakyReLU
+from keras.layers import Input, Dropout, BatchNormalization, Activation, LeakyReLU
 from keras.models import Model
 import matplotlib.pyplot as plt
 import os
@@ -174,7 +173,7 @@ class point_trans_model():
         pred_seq_y = np.zeros_like(self.test_y_data_3d)
         prev_image = self.test_x_data_3d[0,:,:]
         for i in range(len(self.test_index[1:])):
-            input_x_data = data_processing.image_to_table(prev_image, self.G_lats, self.G_lons, (self.test_index[i+1]%365)/365)
+            input_x_data = data_processing.image_to_table(prev_image, self.G_lats, self.G_lons, (self.test_index[i + 1] % 365) / 365)
             pred_seq_sub_y = self.model.predict_on_batch(input_x_data)
             prev_image = pred_seq_sub_y.reshape(prev_image.shape)
             pred_seq_y[i,:,:] = prev_image

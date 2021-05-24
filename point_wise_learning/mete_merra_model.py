@@ -1,13 +1,14 @@
 import numpy as np
 import nc_process
 import netCDF4 as nc
-import data_processing
+from data_prepare import data_processing
 from tensorflow import keras
 import keras.layers as layers
 from keras.layers import Input, BatchNormalization, Activation, LeakyReLU
 from keras.models import Model
 import matplotlib.pyplot as plt
 import datetime
+import time
 
 # Input: MERRA-2, meteology data
 #
@@ -16,7 +17,7 @@ import datetime
 
 class mete_merra_to_g5nr_model():
     def __init__(self, file_path_g_05, file_path_g_06, file_path_m, file_path_mete05, file_path_mete06, file_path_mete07,
-                 merra_var=['TOTEXTTAU'], mete_var=['10m_u_component_of_wind'], test_season=1):
+                 merra_var=['TOTEXTTAU'], mete_var=['u10', 'msl'], test_season=1):
         # define path and target variable
         self.test_season = test_season
         self.file_path_g_05 = file_path_g_05
@@ -258,9 +259,9 @@ class mete_merra_to_g5nr_model():
             for i, day in enumerate(day_list):
                 permutation = np.random.permutation(np.prod(yg_data[i].shape))
                 outx_table = data_processing.image_to_table(xg_data[i, :, :],
-                                                            (self.G_lats-self.G_lats.mean())/self.G_lats.std(),
-                                                            (self.G_lons - self.G_lons.mean())/self.G_lons.std(),
-                                                            (day%365)/365)
+                                                            (self.G_lats-self.G_lats.mean()) / self.G_lats.std(),
+                                                            (self.G_lons - self.G_lons.mean()) / self.G_lons.std(),
+                                                            (day%365) / 365)
                 for var, data in xm_data.items():
                     xm_img = data_processing.resolution_downward(data[i, :, :], self.M_lats, self.M_lons,
                                                                  self.G_lats, self.G_lons)
@@ -275,23 +276,23 @@ class mete_merra_to_g5nr_model():
 
     def _flatten(self, xg_data, xm_data, xme_data, yg_data, day_list):
         permut = np.random.permutation(np.prod(xg_data.shape))
-        x = np.zeros((np.prod(xg_data.shape), 26))
+        x = np.zeros((np.prod(xg_data.shape), 4+len(self.merra_var)+len(self.mete_var)))
         y = np.zeros((np.prod(xg_data.shape), 1))
         for i, day in enumerate(day_list):
             outx_table = data_processing.image_to_table(xg_data[i, :, :],
-                                                        (self.G_lats-self.G_lats.mean())/self.G_lats.std(),
-                                                        (self.G_lons - self.G_lons.mean())/self.G_lons.std(),
-                                                        (day%365)/365)
+                                                        (self.G_lats-self.G_lats.mean()) / self.G_lats.std(),
+                                                        (self.G_lons - self.G_lons.mean()) / self.G_lons.std(),
+                                                        (day%365) / 365)
             for var, data in xm_data.items():
                 if var in self.merra_var:
                     xm_img = data_processing.resolution_downward(data[i, :, :], self.M_lats, self.M_lons,
-                                                             self.G_lats, self.G_lons)
+                                                                 self.G_lats, self.G_lons)
                     outx_table = np.concatenate((outx_table, xm_img.reshape((np.prod(xm_img.shape), 1))), 1)
 
             for var, data in xme_data.items():
                 if var in self.mete_var:
                     xme_img = data_processing.resolution_downward(data[i, :, :], self.Mete_lats, self.Mete_lons,
-                                                              self.G_lats, self.G_lons)
+                                                                  self.G_lats, self.G_lons)
                     outx_table = np.concatenate((outx_table, xme_img.reshape((np.prod(xme_img.shape), 1))), 1)
             outy = yg_data[i].reshape((np.prod(yg_data[i].shape), 1))
             x[i*np.prod(yg_data[i].shape):(i+1)*np.prod(yg_data[i].shape)] = outx_table
@@ -329,7 +330,7 @@ class mete_merra_to_g5nr_model():
         """
         history = self.model.fit(self.train_x, self.train_y,
                                  validation_data=(self.test_x, self.test_y),
-                                 batch_size=499 * 788, epochs=100, callbacks=callbacks_list)
+                                 batch_size=499 , epochs=epoch, callbacks=callbacks_list)
         fig = plt.figure(figsize=(12, 6))
         plt.plot(history.history['loss'], label="train loss")
         plt.plot(history.history['val_loss'], label='test loss')
@@ -372,17 +373,17 @@ class mete_merra_to_g5nr_model():
             prev_g_image = pred_y_flat.reshape(self.test_y_data.shape[1:])
             if i != len(self.yday_list)-1:
                 outx_table = data_processing.image_to_table(prev_g_image,
-                                                        (self.G_lats - self.G_lats.mean()) / self.G_lats.std(),
-                                                        (self.G_lons - self.G_lons.mean()) / self.G_lons.std(),
-                                                        ((day + 1 % 365) / 365))
+                                                            (self.G_lats - self.G_lats.mean()) / self.G_lats.std(),
+                                                            (self.G_lons - self.G_lons.mean()) / self.G_lons.std(),
+                                                            ((day + 1 % 365) / 365))
                 for var, data in self.test_xm_data.items():
-                    xm_img = data_processing.resolution_downward(data[i+1 , :, :], self.M_lats, self.M_lons,
-                                                             self.G_lats, self.G_lons)
+                    xm_img = data_processing.resolution_downward(data[i + 1 , :, :], self.M_lats, self.M_lons,
+                                                                 self.G_lats, self.G_lons)
                     outx_table = np.concatenate((outx_table, xm_img.reshape(np.prod(xm_img.shape))), 1)
 
                 for var, data in self.test_xme_data.items():
-                    xme_img = data_processing.resolution_downward(data[i+ 1, :, :], self.Mete_lats, self.Mete_lons,
-                                                              self.G_lats, self.G_lons)
+                    xme_img = data_processing.resolution_downward(data[i + 1, :, :], self.Mete_lats, self.Mete_lons,
+                                                                  self.G_lats, self.G_lons)
                     outx_table = np.concatenate((outx_table, xme_img.reshape(np.prod(xme_img.shape))), 1)
             pred_seq_y[i, :, :] = prev_g_image
         seq_RMSE_mat, seq_R2_mat = self._evaluate(pred_seq_y, self.test_y_data)
@@ -392,6 +393,7 @@ class mete_merra_to_g5nr_model():
         self.test_y_data.dump('true_y')
 
 if __name__ == "__main__":
+    start = time.time()
     file_path_g_06 = '/scratch/menglinw/Downscale_data/MERRA2/G5NR_aerosol_variables_over_MiddleEast_daily_20060516-20070515.nc'
     #file_path_g_06 = r'C:\Users\96349\Documents\Downscale_data\MERRA2\G5NR_aerosol_variables_over_MiddleEast_daily_20060516-20070515.nc'
     file_path_g_05 = '/scratch/menglinw/Downscale_data/MERRA2/G5NR_aerosol_variables_over_MiddleEast_daily_20050516-20060515.nc'
@@ -406,10 +408,12 @@ if __name__ == "__main__":
     #file_path_mete05 = r'C:\Users\96349\Documents\Downscale_data\meteology_data/2005_mete_data.nc'
     #file_path_mete06 = r'C:\Users\96349\Documents\Downscale_data\meteology_data/2006_mete_data.nc'
     #file_path_mete07 = r'C:\Users\96349\Documents\Downscale_data\meteology_data/2007_mete_data.nc'
+    merra_var = ['TOTEXTTAU']
+    mete_var = ['u10', 'msl', 'tp']
     model = mete_merra_to_g5nr_model(file_path_g_05, file_path_g_06, file_path_m, file_path_mete05, file_path_mete06,
-                                     file_path_mete07, test_season=1)
+                                     file_path_mete07, merra_var=merra_var, mete_var=mete_var, test_season=1)
     model.train(epoch=1)
     model.predict()
-
+    print('Duriation:', time.time()-start, 's')
 
 

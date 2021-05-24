@@ -2,10 +2,9 @@ import numpy as np
 import nc_process
 import netCDF4 as nc
 import random
-import data_processing
-from tensorflow import keras
+from data_prepare import data_processing
 import keras.layers as layers
-from keras.layers import Input, Dense, Reshape, Dropout, Concatenate, BatchNormalization, Activation, LeakyReLU
+from keras.layers import Input, BatchNormalization, Activation, LeakyReLU
 from keras.models import Model
 import matplotlib.pyplot as plt
 
