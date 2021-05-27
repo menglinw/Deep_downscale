@@ -54,27 +54,40 @@ def resolution_downward(image, M_lats, M_lons, G_lats, G_lons):
     for i in range(len(M_lats)):
         for j in range(len(M_lons)):
             aod = image[i, j]
-            min_lat = np.argmin( np.abs( G_lats - M_lats[i] + lat_gap ) )
-            max_lat = np.argmin( np.abs( G_lats - M_lats[i] - lat_gap ) )
-            min_lon = np.argmin( np.abs( G_lons - M_lons[j] + lon_gap ) )
-            max_lon = np.argmin( np.abs( G_lons - M_lons[j] - lon_gap) )
+            min_lat = np.argmin( np.abs( G_lats - M_lats[i] + lat_gap ) ) if i != 0 else 0
+            max_lat = np.argmin( np.abs( G_lats - M_lats[i] - lat_gap ) ) if i != len(M_lats)-1 else len(G_lats)
+            min_lon = np.argmin( np.abs( G_lons - M_lons[j] + lon_gap ) ) if j != 0 else 0
+            max_lon = np.argmin( np.abs( G_lons - M_lons[j] - lon_gap) ) if j != len(M_lons)-1 else len(G_lons)
+            # print('lat:', min_lat, max_lat, '  lon:', min_lon, max_lon)
             # print(M_high_image[min_lat:max_lat, min_lon:max_lon].shape)
             M_high_image[min_lat:max_lat, min_lon:max_lon] = aod
     return M_high_image
 
 
-def image_to_table(image, lats, lons, day):
+def image_to_table(image, elev, lats, lons, day):
+    '''
+
+    :param image: AOD data
+    :param elev: elevation data
+    :param lats: latitude
+    :param lons: longitude
+    :param day: day
+    :return:
+    (np.prod(image.shape), 5)
+    5 columns: AOD, latitude, longitude, day, elevation,
+    '''
     if image.shape != (len(lats), len(lons)):
         print('please check data consistency!')
         raise ValueError
-    out_array = np.zeros((len(lats)*len(lons), 4))
+    out_array = np.zeros((len(lats)*len(lons), 5))
     out_array[:, 0] = image.reshape(len(lats)*len(lons))
     lat_in = []
     for lat in lats:
         lat_in += [lat]*len(lons)
     out_array[:, 1] = lat_in
     out_array[:, 2] = list(lons)*len(lats)
-    out_array[: 3] = day
+    out_array[:, 3] = float(day)
+    out_array[:, 4] = elev.reshape(len(lats)*len(lons))
     return out_array
 
 if __name__=='__main__':
@@ -84,6 +97,7 @@ if __name__=='__main__':
     file_path_g_05 = r'C:\Users\96349\Documents\Downscale_data\MERRA2\G5NR_aerosol_variables_over_MiddleEast_daily_20050516-20060515.nc'
     # file path of MERRA-2 data
     file_path_m = r'C:\Users\96349\Documents\Downscale_data\MERRA2\MERRA2_aerosol_variables_over_MiddleEast_daily_20000516-20180515.nc'
+    file_path_ele = r'C:\Users\96349\Documents\Downscale_data\elevation\elevation_data.npy'
     # target variable
     target_var = 'TOTEXTTAU'
     # take a sample image from G5NR and MERRA-2 respectively
@@ -92,7 +106,7 @@ if __name__=='__main__':
     sample_G_image = g05_data.variables[target_var][0]
     m_data = nc.Dataset(file_path_m)
     sample_M_image = m_data.variables[target_var][1825]
-
+    elev_data = np.load(file_path_ele)
     M_lons = m_data.variables['lon'][:]
     M_lats = m_data.variables['lat'][:]
 
@@ -100,6 +114,6 @@ if __name__=='__main__':
     G_lats = g05_data.variables['lat'][:]
 
     d_image = resolution_downward(sample_M_image, M_lats, M_lons, G_lats, G_lons)
-    table_test = image_to_table(d_image, G_lats, G_lons, 0)
+    table_test = image_to_table(sample_G_image, elev_data, G_lats, G_lons, 0)
     print('the shape of table is:', table_test.shape)
-    print(table_test[499*788-50:])
+    print(table_test[499*788-10:])
