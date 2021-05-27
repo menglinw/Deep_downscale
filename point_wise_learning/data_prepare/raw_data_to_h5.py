@@ -56,18 +56,12 @@ class raw_to_h5():
         # processing data
         self._mete_temp_avg()
         self._train_test_split()
-        self.train_x, self.train_y = self._flatten(self.train_xg_data, self.train_xm_data, self.train_xme_data,
-                                                   self.train_y_data, self.xday_list)
-        self.test_x, self.test_y = self._flatten(self.test_xg_data, self.test_xm_data, self.test_xme_data,
-                                                 self.test_y_data, self.yday_list, permut=False)
+        self._flatten(self.train_xg_data, self.train_xm_data, self.train_xme_data,
+                      self.train_y_data, self.xday_list, h5_name='Train_data.h5')
+        self._flatten(self.test_xg_data, self.test_xm_data, self.test_xme_data,
+                      self.test_y_data, self.yday_list, h5_name='Test_data.h5')
 
-    def save_to_h5(self):
-        h5f = h5py.File('processed_data.h5', 'w')
-        h5f.create_dataset('train_x', data=self.train_x)
-        h5f.create_dataset('train_y', data=self.train_y)
-        h5f.create_dataset('test_x', data=self.test_x)
-        h5f.create_dataset('test_y', data=self.test_y)
-        h5f.close()
+
 
     def _data_g5nr_to_array(self, nc_data, time_start=0, time_length=365):
         time_interval = range(time_start, time_start + time_length)
@@ -173,7 +167,7 @@ class raw_to_h5():
                 outy = yg_data[i].reshape((np.prod(yg_data[i].shape), 1))
                 yield outx_table[permutation], outy[permutation]
 
-    def _flatten(self, xg_data, xm_data, xme_data, yg_data, day_list, permut=True):
+    def _flatten(self, xg_data, xm_data, xme_data, yg_data, day_list, h5_name):
         '''
 
         :param xg_data: G5NR data X
@@ -183,14 +177,15 @@ class raw_to_h5():
         :param day_list: X day index (not Y)
         :param permut: permutation of the output
         :return:
-        a flatten table, the variables are:
+        a flatten table, not permuted the variables are:
         AOD, latitude, longitude, day, elevation, mera_vars, mete_vars
         '''
 
-        x = np.zeros((np.prod(xg_data.shape), 5 + len(self.merra_var) + len(self.mete_var)))
-        y = np.zeros((np.prod(xg_data.shape), 1))
+        #x = np.zeros((np.prod(xg_data.shape), 5 + len(self.merra_var) + len(self.mete_var)))
+        #y = np.zeros((np.prod(xg_data.shape), 1))
+        f = h5py.File(h5_name, 'a')
         for i, day in enumerate(day_list):
-            print('Processing day', i, '/', len(day_list))
+
             outx_table = data_processing.image_to_table(xg_data[i, :, :], self.ele_data,
                                                         (self.G_lats - self.G_lats.mean()) / self.G_lats.std(),
                                                         (self.G_lons - self.G_lons.mean()) / self.G_lons.std(),
@@ -207,13 +202,19 @@ class raw_to_h5():
                                                                   self.G_lats, self.G_lons)
                     outx_table = np.concatenate((outx_table, xme_img.reshape((np.prod(xme_img.shape), 1))), 1)
             outy = yg_data[i].reshape((np.prod(yg_data[i].shape), 1))
-            x[i * np.prod(yg_data[i].shape):(i + 1) * np.prod(yg_data[i].shape)] = outx_table
-            y[i * np.prod(yg_data[i].shape):(i + 1) * np.prod(yg_data[i].shape)] = outy
-        if permut:
-            permut = np.random.permutation(np.prod(xg_data.shape))
-            return x[permut], y[permut]
-        else:
-            return x, y
+            if i == 0:
+                f.create_dataset('X', data=outx_table, chunks=True,
+                                 maxshape=(None, 5 + len(self.merra_var) + len(self.mete_var)))
+                f.create_dataset('Y', data=outy, chunks=True, maxshape=(None, 1))
+            else:
+                f['X'].resize((f['X'].shape[0] + outx_table.shape[0]), axis=0)
+                f['X'][-outx_table.shape[0]:] = outx_table
+
+                f['Y'].resize((f['Y'].shape[0] + outy.shape[0]), axis=0)
+                f['Y'][-outy.shape[0]:] = outy
+            print('Processing day: ', i, '/', len(day_list), 'Shape of X and Y', outx_table.shape, outy.shape)
+        f.close()
+
 
 
 
@@ -247,5 +248,4 @@ if __name__ == "__main__":
     data_processor = raw_to_h5(file_path_g_05, file_path_g_06, file_path_m, file_path_mete05, file_path_mete06,
                  file_path_mete07, file_path_ele, merra_var=merra_var, mete_var=mete_var, test_season=1)
     data_processor.process()
-    data_processor.save_to_h5()
     print('Duriation:', time.time() - start)
