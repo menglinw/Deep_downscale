@@ -64,7 +64,7 @@ def resolution_downward(image, M_lats, M_lons, G_lats, G_lons):
     return M_high_image
 
 
-def image_to_table(image, elev, lats, lons, day):
+def image_to_table(image, lats, lons, day, elev=None):
     '''
 
     :param image: AOD data
@@ -79,7 +79,8 @@ def image_to_table(image, elev, lats, lons, day):
     if image.shape != (len(lats), len(lons)):
         print('please check data consistency!')
         raise ValueError
-    out_array = np.zeros((len(lats)*len(lons), 5))
+
+    out_array = np.zeros((len(lats)*len(lons), 5)) if elev!=None else np.zeros((len(lats)*len(lons), 4))
     out_array[:, 0] = image.reshape(len(lats)*len(lons))
     lat_in = []
     for lat in lats:
@@ -87,7 +88,8 @@ def image_to_table(image, elev, lats, lons, day):
     out_array[:, 1] = lat_in
     out_array[:, 2] = list(lons)*len(lats)
     out_array[:, 3] = float(day)
-    out_array[:, 4] = elev.reshape(len(lats)*len(lons))
+    if elev != None:
+        out_array[:, 4] = elev.reshape(len(lats)*len(lons))
     return out_array
 
 if __name__=='__main__':
