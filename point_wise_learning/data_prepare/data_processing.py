@@ -79,8 +79,10 @@ def image_to_table(image, lats, lons, day, elev=None):
     if image.shape != (len(lats), len(lons)):
         print('please check data consistency!')
         raise ValueError
-
-    out_array = np.zeros((len(lats)*len(lons), 5)) if elev!=None else np.zeros((len(lats)*len(lons), 4))
+    if elev is not None:
+        out_array = np.zeros((len(lats)*len(lons), 5))
+    else:
+        out_array = np.zeros((len(lats)*len(lons), 4))
     out_array[:, 0] = image.reshape(len(lats)*len(lons))
     lat_in = []
     for lat in lats:
@@ -88,7 +90,7 @@ def image_to_table(image, lats, lons, day, elev=None):
     out_array[:, 1] = lat_in
     out_array[:, 2] = list(lons)*len(lats)
     out_array[:, 3] = float(day)
-    if elev != None:
+    if elev is not None:
         out_array[:, 4] = elev.reshape(len(lats)*len(lons))
     return out_array
 
