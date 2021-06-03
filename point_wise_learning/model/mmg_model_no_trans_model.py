@@ -1,50 +1,69 @@
 import numpy as np
-import nc_process
-import netCDF4 as nc
-import random
-from data_prepare import data_processing
+import h5py
+import os
+from tensorflow import keras
 import keras.layers as layers
 from keras.layers import Input, BatchNormalization, Activation, LeakyReLU
 from keras.models import Model
 import matplotlib.pyplot as plt
+import nc_process
+import time
 
-"""
-use MERRA-2 data to train a pointwise model, which will be fed into final model to stablize the spatialtemporal association
-input data: flatten MERRA-2 data (random split parameter: test size)
-output: a loss-curve plot, final model
-"""
-class merra_pointwise():
-    def __init__(self, file_path_m, test_days):
-        self.test_days = test_days
-        self.file_path_m = file_path_m
-        self.target_var = 'TOTEXTTAU'
-        m_data = nc.Dataset(file_path_m)
-        self.m_data = m_data.variables[self.target_var][:,:,:]
-        M_lons = m_data.variables['lon'][:]
-        self.M_lons = (M_lons-M_lons.mean())/M_lons.std()
-        M_lats = m_data.variables['lat'][:]
-        self.M_lats = (M_lats-M_lats.mean())/M_lats.std()
+
+class mmg_model():
+    def __init__(self, file_path_h5):
+        self.train_file = h5py.File(os.path.join(file_path_h5, 'Train_data.h5'), 'r')
+        self.test_file = h5py.File(os.path.join(file_path_h5, 'Test_data.h5'), 'r')
         # define model
         self.model = self.define_model()
 
-    def random_split(self, test_days=365, seed=2021):
-        random.seed(seed)
-        test_index = random.sample(range(1, (self.m_data.shape[0]-1)), int(test_days))
-        train_index = list(set(list(range(self.m_data.shape[0]-1))) - set(test_index))
-        return np.array(train_index), np.array(test_index)
+    def _generator(self, data_file, batch_size, is_train=True, permut=False):
+        indexs = np.arange(0, len(data_file['X']), 1)
+        #indexs = np.arange(0, 10000, 1)
+        if permut:
+            np.random.shuffle(indexs)
+        while True:
+            for i in range(0, len(indexs), batch_size):
+                if is_train:
+                    yield data_file['X'][i:i+batch_size], data_file['Y'][i:i+batch_size]
+                else:
+                    yield data_file['X'][i:i+batch_size]
 
-    def raw_to_table(self, x_data, y_data):
-        if x_data.shape != y_data.shape:
-            print('Please check the data consistency!')
-            raise ValueError
-        train_x_table = np.zeros((np.prod(x_data.shape), 4))
-        for i in range(x_data.shape[0]):
-            train_x_table[i*np.prod(x_data.shape[1:]):(i+1)*np.prod(x_data.shape[1:])] = data_processing.\
-                image_to_table(x_data[i], self.M_lats, self.M_lons, (i%365)/365)
-        train_y_table = y_data.reshape(np.prod(y_data.shape))
-        return train_x_table, train_y_table
+    def train(self, epochs=100):
+        callbacks_list = [
+            keras.callbacks.EarlyStopping(
+                monitor='val_loss',
+                patience=5
+            ),
+            keras.callbacks.ModelCheckpoint(
+                filepath='mmg_model.h5',
+                monitor='val_loss',
+                save_best_only=True
+            ),
+            keras.callbacks.ReduceLROnPlateau(
+                monitor='val_loss',
+                factor=0.1,
+                patience=3
+            )
+        ]
+        history = self.model.fit_generator(generator=self._generator(data_file=self.train_file, batch_size=788,
+                                                                     is_train=True, permut=True),
+                                           epochs=epochs,
+                                           steps_per_epoch=len(self.train_file['X'])/788,
+                                           validation_data=self._generator(data_file=self.test_file, batch_size=788,
+                                                                           is_train=True, permut=True),
+                                           validation_steps=len(self.test_file['X'])/788,
+                                           callbacks=callbacks_list
+                                           )
+        fig = plt.figure(figsize=(12, 6))
+        plt.plot(history.history['loss'], label="train loss")
+        plt.plot(history.history['val_loss'], label='test loss')
+        plt.xlabel('epochs')
+        plt.ylabel('loss')
+        plt.legend()
+        plt.savefig('loss_curve.jpg')
 
-    def evaluate(self, pred_data, true_data):
+    def _evaluate(self, pred_data, true_data):
         if pred_data.shape != true_data.shape:
             print('Please check data consistency!')
             raise ValueError
@@ -56,9 +75,20 @@ class merra_pointwise():
                 R2_out[i,j], _ = nc_process.rsquared(pred_data[:,i,j], true_data[:,i,j])
         return RMSE_out, R2_out
 
+    def predict(self):
+        y_hat = self.model.predict(self.test_file['X'])
+        y_hat = y_hat.reshape((int(len(self.test_file['Y'])/499/788), 499, 788))
+        y = self.test_file['Y'][:].reshape((int(len(self.test_file['Y'])/499/788), 499, 788))
+        seq_RMSE_mat, seq_R2_mat = self._evaluate(y_hat, y)
+        np.save('seq_RMSE_mat', seq_RMSE_mat)
+        np.save('seq_R2_mat', seq_R2_mat)
+        y_hat.dump('pred_y')
+        y.dump('true_y')
+
+
     def define_model(self):
-        input = Input(shape=(4))
-        x = layers.Dense(8, kernel_initializer="he_normal")(input)
+        input = Input(shape=(5+11+8))
+        x = layers.Dense(32, kernel_initializer="he_normal")(input)
         x = BatchNormalization()(x)
         x = LeakyReLU(alpha=0.1)(x)
         x = layers.Dense(16, kernel_initializer="he_normal")(x)
@@ -156,50 +186,20 @@ class merra_pointwise():
         model.compile(optimizer='adam', loss="mean_squared_error")
         return model
 
-    def train(self):
-        train_x_index, test_y_index = self.random_split(test_days=self.test_days)
-        train_y_index = train_x_index+1
-        test_x_index = test_y_index-1
-        #print(train_y_index)
-        # train raw data
-        train_xm_data = self.m_data[train_x_index,:,:]
-        train_y_data_3d = self.m_data[train_y_index,:,:]
-        train_x_data, train_y_data = self.raw_to_table(train_xm_data,train_y_data_3d)
-        # test raw data
-        '''
-        test_xm_data = self.m_data[test_x_index,:,:]
-        self.test_y_data_3d = self.m_data[test_y_index,:,:]
-        self.test_x_data, test_y_data = self.raw_to_table(test_xm_data, self.test_y_data_3d)
-        callbacks_list = [
-            keras.callbacks.EarlyStopping(
-                monitor='val_loss',
-                patience=10
-            ),
-            keras.callbacks.ModelCheckpoint(
-                filepath='latent_LSTM.h5',
-                monitor='val_loss',
-                save_best_only=True
-            ),
-            keras.callbacks.ReduceLROnPlateau(
-                monitor='val_loss',
-                factor=0.1,
-                patience=5
-            )
-        ]
-        '''
-        history = self.model.fit(train_x_data, train_y_data, batch_size=499, epochs=50)
-        self.model.save('pointwise_1_randomsplit')
-        fig = plt.figure(figsize=(12, 6))
-        plt.plot(history.history['loss'], label="train loss")
-        # plt.plot(history.history['val_loss'], label='test loss')
-        plt.xlabel('epochs')
-        plt.ylabel('loss')
-        plt.legend()
-        plt.savefig('loss_curve.jpg')
 
-if __name__=="__main__":
-    # file path of MERRA-2 data
-    file_path_m = '/scratch/menglinw/Downscale_data/MERRA2/MERRA2_aerosol_variables_over_MiddleEast_daily_20000516-20180515.nc'
-    #file_path_m = r'C:\Users\96349\Documents\Downscale_data\MERRA2\MERRA2_aerosol_variables_over_MiddleEast_daily_20000516-20180515.nc'
-    model = merra_pointwise(file_path_m, 0)
+
+
+
+
+if __name__ == '__main__':
+    start = time.time()
+    file_path_h5 = '/scratch/menglinw/Downscale_data/FLAT_DATA/data1'
+    # columns: AOD, latitude, longitude, day, elevation, mera_vars, mete_vars
+    # merra_var = ['BCEXTTAU', 'DUEXTTAU', 'OCEXTTAU', 'SUEXTTAU', 'TOTEXTTAU', 'BCSMASS', 'DUSMASS25', 'DUSMASS',
+    #              'OCSMASS', 'SO4SMASS', 'SSSMASS']
+    #  mete_var = ['u10', 'v10', 'd2m', 't2m', 'blh', 'uvb', 'msl', 'tp']
+    model = mmg_model(file_path_h5)
     model.train()
+    print('Train time:', (time.time()-start)/60, 'mins')
+    model.predict()
+    print('Duriation:', (time.time()-start)/60, 'mins')

@@ -1,7 +1,7 @@
 
 import cdsapi
 # 2005
-'''
+
 c = cdsapi.Client()
 
 c.retrieve(
@@ -10,7 +10,7 @@ c.retrieve(
         'product_type': 'reanalysis',
         'format': 'netcdf',
         'area': [
-            42, 25, 10,
+            43, 25, 10,
             75,
         ],
         'day': [
@@ -44,14 +44,13 @@ c.retrieve(
         ],
         'variable': [
             '10m_u_component_of_wind', '10m_v_component_of_wind', '2m_dewpoint_temperature',
-            '2m_temperature', 'mean_sea_level_pressure', 'mean_wave_direction',
-            'mean_wave_period', 'sea_surface_temperature', 'significant_height_of_combined_wind_waves_and_swell',
-            'surface_pressure', 'total_precipitation',
+            '2m_temperature', 'boundary_layer_height', 'downward_uv_radiation_at_the_surface',
+            'mean_sea_level_pressure', 'total_precipitation',
         ],
         'year': '2005',
     },
-    'download.nc')
-'''
+    '2005_mete_data.nc')
+
 
 # 2006
 c = cdsapi.Client()
@@ -63,9 +62,8 @@ c.retrieve(
         'format': 'netcdf',
         'variable': [
             '10m_u_component_of_wind', '10m_v_component_of_wind', '2m_dewpoint_temperature',
-            '2m_temperature', 'mean_sea_level_pressure', 'mean_wave_direction',
-            'mean_wave_period', 'sea_surface_temperature', 'significant_height_of_combined_wind_waves_and_swell',
-            'surface_pressure', 'total_precipitation',
+            '2m_temperature', 'boundary_layer_height', 'downward_uv_radiation_at_the_surface',
+            'mean_sea_level_pressure', 'total_precipitation',
         ],
         'year': '2006',
         'month': [
@@ -112,9 +110,8 @@ c.retrieve(
         'format': 'netcdf',
         'variable': [
             '10m_u_component_of_wind', '10m_v_component_of_wind', '2m_dewpoint_temperature',
-            '2m_temperature', 'mean_sea_level_pressure', 'mean_wave_direction',
-            'mean_wave_period', 'sea_surface_temperature', 'significant_height_of_combined_wind_waves_and_swell',
-            'surface_pressure', 'total_precipitation',
+            '2m_temperature', 'boundary_layer_height', 'downward_uv_radiation_at_the_surface',
+            'mean_sea_level_pressure', 'total_precipitation',
         ],
         'year': '2007',
         'month': [

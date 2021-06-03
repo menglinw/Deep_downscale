@@ -2,10 +2,10 @@ import numpy as np
 import nc_process
 import netCDF4 as nc
 import random
-import data_processing
+from data_prepare import data_processing
 from tensorflow import keras
 import keras.layers as layers
-from keras.layers import Input, Dense, Reshape, Dropout, Concatenate, BatchNormalization, Activation
+from keras.layers import Input, BatchNormalization, Activation, LeakyReLU
 from keras.models import Model
 import matplotlib.pyplot as plt
 
@@ -69,86 +69,141 @@ class direct_point_learn():
         input = Input(shape=(5))
         x = layers.Dense(8, kernel_initializer="he_normal")(input)
         x = BatchNormalization()(x)
-        #x = Dropout(0.5)(x)
-        x = Activation("tanh")(x)
+        x = LeakyReLU(alpha=0.1)(x)
         x = layers.Dense(16, kernel_initializer="he_normal")(x)
         x = BatchNormalization()(x)
         #x = Dropout(0.5)(x)
-        x = Activation("exponential")(x)
+        x = LeakyReLU(alpha=0.1)(x)
         x = layers.Dense(32, kernel_initializer="he_normal")(x)
         x = BatchNormalization()(x)
         #x = Dropout(0.5)(x)
-        x = Activation("tanh")(x)
-        x = Activation("tanh")(x)
-        x = layers.Dense(16, kernel_initializer="he_normal")(x)
-        x = BatchNormalization()(x)
-        #x = Dropout(0.5)(x)
-        x = Activation("exponential")(x)
+        x = LeakyReLU(alpha=0.1)(x)
         x = layers.Dense(32, kernel_initializer="he_normal")(x)
         x = BatchNormalization()(x)
         #x = Dropout(0.5)(x)
-        x = Activation("tanh")(x)
-        x = Activation("tanh")(x)
-        x = layers.Dense(16, kernel_initializer="he_normal")(x)
-        x = BatchNormalization()(x)
-        #x = Dropout(0.5)(x)
-        x = Activation("exponential")(x)
+        x = LeakyReLU(alpha=0.1)(x)
         x = layers.Dense(32, kernel_initializer="he_normal")(x)
         x = BatchNormalization()(x)
         #x = Dropout(0.5)(x)
-        x = Activation("tanh")(x)
-        x = Activation("tanh")(x)
-        x = layers.Dense(16, kernel_initializer="he_normal")(x)
-        x = BatchNormalization()(x)
-        #x = Dropout(0.5)(x)
-        x = Activation("exponential")(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
         x = layers.Dense(32, kernel_initializer="he_normal")(x)
         x = BatchNormalization()(x)
         #x = Dropout(0.5)(x)
-        x = Activation("tanh")(x)
-        x = Activation("tanh")(x)
-        x = layers.Dense(16, kernel_initializer="he_normal")(x)
-        x = BatchNormalization()(x)
-        #x = Dropout(0.5)(x)
-        x = Activation("exponential")(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
         x = layers.Dense(32, kernel_initializer="he_normal")(x)
         x = BatchNormalization()(x)
         #x = Dropout(0.5)(x)
-        x = Activation("tanh")(x)
-        x = Activation("tanh")(x)
-        x = layers.Dense(16, kernel_initializer="he_normal")(x)
-        x = BatchNormalization()(x)
-        #x = Dropout(0.5)(x)
-        x = Activation("exponential")(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
         x = layers.Dense(32, kernel_initializer="he_normal")(x)
         x = BatchNormalization()(x)
         #x = Dropout(0.5)(x)
-        x = Activation("tanh")(x)
-        x = Activation("tanh")(x)
-        x = layers.Dense(16, kernel_initializer="he_normal")(x)
-        x = BatchNormalization()(x)
-        #x = Dropout(0.5)(x)
-        x = Activation("exponential")(x)
-        x = layers.Dense(32, kernel_initializer="he_normal")(x)
-        x = BatchNormalization()(x)
-        #x = Dropout(0.5)(x)
-        x = Activation("tanh")(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
         x = layers.Dense(64, kernel_initializer="he_normal")(x)
         x = BatchNormalization()(x)
         #x = Dropout(0.5)(x)
-        x = Activation("linear")(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(64, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(64, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(128, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(128, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(128, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+
+        x = layers.Dense(256, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(256, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(128, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(128, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(64, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(64, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
         x = layers.Dense(32, kernel_initializer="he_normal")(x)
         x = BatchNormalization()(x)
         #x = Dropout(0.5)(x)
-        x = Activation("sigmoid")(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(32, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(32, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(32, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(32, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = layers.Dense(32, kernel_initializer="he_normal")(x)
+        x = BatchNormalization()(x)
+        #x = Dropout(0.5)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+
         x = layers.Dense(16, kernel_initializer="he_normal")(x)
         x = BatchNormalization()(x)
         #x = Dropout(0.5)(x)
-        x = Activation("exponential")(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
         x = layers.Dense(8, kernel_initializer="he_normal")(x)
         x = BatchNormalization()(x)
         #x = Dropout(0.5)(x)
-        x = Activation("linear")(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
         x = layers.Dense(1, kernel_initializer="he_normal")(x)
         x = BatchNormalization()(x)
         #x = Dropout(0.5)(x)
@@ -232,10 +287,6 @@ class direct_point_learn():
             self.test_y_data_3d = self.g_data[test_index[1:], :, :]
             self.test_x_data, test_y_data = self.raw_to_table(test_xg_data, test_xm_data, self.test_y_data_3d)
             callbacks_list = [
-                keras.callbacks.EarlyStopping(
-                    monitor='val_loss',
-                    patience=10
-                ),
                 keras.callbacks.ModelCheckpoint(
                     filepath='latent_LSTM.h5',
                     monitor='val_loss',
@@ -249,7 +300,7 @@ class direct_point_learn():
             ]
             history = self.model.fit(train_x_data, train_y_data,
                                      validation_data=(self.test_x_data[:100*499*788], test_y_data[:100*499*788]),
-                                     batch_size=499*788, epochs=50)
+                                     batch_size=499*788, epochs=100, callbacks=callbacks_list)
             self.model.save('pointwise_1_sequential')
             fig = plt.figure(figsize=(12, 6))
             plt.plot(history.history['loss'], label="train loss")
@@ -282,8 +333,8 @@ class direct_point_learn():
                 m_list = np.zeros((np.prod(prev_g_image.shape), 1))
                 input_x_data = data_processing.image_to_table(prev_g_image, self.G_lats, self.G_lons,
                                                               (self.test_index[i + 1] % 365) / 365)
-                m_list[:, 0] = data_processing.resolution_downward(prev_m_image,self.M_lats, self.M_lons,
-                                                                self.G_lats, self.G_lons).\
+                m_list[:, 0] = data_processing.resolution_downward(prev_m_image, self.M_lats, self.M_lons,
+                                                                   self.G_lats, self.G_lons).\
                     reshape(np.prod(prev_g_image.shape))
                 input_x_data = np.concatenate((input_x_data, m_list), 1)
                 pred_seq_sub_y = self.model.predict_on_batch(input_x_data)
