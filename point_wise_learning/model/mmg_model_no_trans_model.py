@@ -12,8 +12,8 @@ import time
 
 class mmg_model():
     def __init__(self, file_path_h5):
-        self.train_file = h5py.File(os.path.join(file_path_h5, 'Train_data.h5'), 'r')
-        self.test_file = h5py.File(os.path.join(file_path_h5, 'Test_data.h5'), 'r')
+        self.train_file = h5py.File(os.path.join(file_path_h5, 'Norm_train_data.h5'), 'r')
+        self.test_file = h5py.File(os.path.join(file_path_h5, 'Norm_test_data.h5'), 'r')
         # define model
         self.model = self.define_model()
 
