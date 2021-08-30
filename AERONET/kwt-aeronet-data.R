@@ -116,7 +116,7 @@ kwt.aeronet.sites = kwt.aeronet.data %>% rbindlist() %>%
 #
 # # Map of AERONET sites ----------------------------------------------------
 # require(ggmap)
-# register_google(key = 'AIzaSyCiSH7mB-mlCPTYmy-6jrSXuUCZKwlqoew')
+# register_google(key = '')
 # 
 # kwt.base = get_map("29.301738, 47.945268", zoom = 12, maptype = 'road') %>% 
 #   ggmap_bbox() %>% # custom function from StackOverflow to fix ggmap raster projection
